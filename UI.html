@@ -134,21 +134,9 @@
                                 <i class="fas fa-chart-line"></i> الإحصائيات
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="fas fa-box-open"></i> المنتجات
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="fas fa-users"></i> العملاء
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="fas fa-cog"></i> الإعدادات
-                            </a>
-                        </li>
+
+
+
                     </ul>
                 </div>
             </div>
@@ -231,6 +219,9 @@
                                         <th>المبلغ</th>
                                         <th>الحالة</th>
                                         <th>التاريخ</th>
+                                         <th>المقاس</th>
+                                         <th>اللون</th>
+                                        <th>العدد</th>
                                         <th>خيارات</th>
                                     </tr>
                                 </thead>
@@ -352,202 +343,112 @@
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 
     <script>
-        // Sample orders data
-        const orders = [
-            {
-                id: '#12345',
-                customer: 'محمد أحمد',
-                phone: '01012345678',
-                governorate: 'القاهرة',
-                amount: '450 ج.م',
-                status: 'مكتمل',
-                date: '2023-10-15',
-                statusClass: 'completed',
-                details: {
-                    address: 'القاهرة - مدينة نصر - شارع 9',
-                    products: [
-                        { name: 'تيشرت أوفر سايز', color: 'أسود', size: 'XL', quantity: 2, price: '200 ج.م' },
-                        { name: 'تيشرت أوفر سايز', color: 'أبيض', size: 'L', quantity: 1, price: '200 ج.م' }
-                    ],
-                    shipping: '50 ج.م',
-                    payment: 'فودافون كاش'
-                }
-            },
-            {
-                id: '#12344',
-                customer: 'أحمد محمود',
-                phone: '01123456789',
-                governorate: 'الجيزة',
-                amount: '350 ج.م',
-                status: 'قيد الانتظار',
-                date: '2023-10-15',
-                statusClass: 'pending',
-                details: {
-                    address: 'الجيزة - الدقي - شارع الجامعة',
-                    products: [
-                        { name: 'تيشرت أوفر سايز', color: 'أزرق', size: '2XL', quantity: 1, price: '250 ج.م' }
-                    ],
-                    shipping: '50 ج.م',
-                    payment: 'فودافون كاش'
-                }
-            },
-            {
-                id: '#12343',
-                customer: 'علي حسن',
-                phone: '01234567890',
-                governorate: 'الإسكندرية',
-                amount: '650 ج.م',
-                status: 'مكتمل',
-                date: '2023-10-14',
-                statusClass: 'completed',
-                details: {
-                    address: 'الإسكندرية - سموحة - شارع 45',
-                    products: [
-                        { name: 'تيشرت أوفر سايز', color: 'رمادي', size: 'XL', quantity: 3, price: '200 ج.م' }
-                    ],
-                    shipping: '50 ج.م',
-                    payment: 'فودافون كاش'
-                }
-            }
-        ];
 
-        // Function to render orders table
-        function renderOrders() {
-            const tableBody = document.getElementById('orders-table-body');
-            tableBody.innerHTML = '';
 
-            // Update summary cards
-            document.getElementById('today-orders').textContent = orders.length;
-            document.getElementById('today-sales').textContent = orders.reduce((sum, order) => {
-                return sum + parseInt(order.amount);
-            }, 0) + ' ج.م';
-            document.getElementById('pending-orders').textContent = orders.filter(order => order.status === 'قيد الانتظار').length;
 
-            // Add orders to table
-            orders.forEach(order => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${order.id}</td>
-                    <td>${order.customer}</td>
-                    <td>${order.phone}</td>
-                    <td>${order.governorate}</td>
-                    <td>${order.amount}</td>
-                    <td><span class="badge badge-${order.statusClass}">${order.status}</span></td>
-                    <td>${order.date}</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary view-order" data-id="${order.id}">
-                            <i class="fas fa-eye"></i> عرض
-                        </button>
-                    </td>
-                `;
-                tableBody.appendChild(row);
-            });
+renderOrders();
 
-            // Add event listeners to view buttons
-            document.querySelectorAll('.view-order').forEach(button => {
-                button.addEventListener('click', function() {
-                    const orderId = this.getAttribute('data-id');
-                    showOrderDetails(orderId);
-                });
-            });
-        }
 
-        // Function to show order details in modal
-        function showOrderDetails(orderId) {
-            const order = orders.find(o => o.id === orderId);
-            if (!order) return;
+    // Fetch orders from backend API
+    async function fetchOrders() {
+        const pageId = "388698940987084"; // 👈 Replace with the actual page_id dynamically if needed
+        const response = await fetch(`/api/orders/${pageId}`);
+        const data = await response.json();
+        orders = data;
+        renderOrders();
+    }
 
-            // Set modal content
-            document.getElementById('modal-order-id').textContent = order.id.substring(1);
-            document.getElementById('customer-name').textContent = order.customer;
-            document.getElementById('customer-phone').textContent = order.phone;
-            document.getElementById('customer-address').textContent = order.details.address;
-            document.getElementById('order-date').textContent = order.date;
-            document.getElementById('order-status').innerHTML = `<span class="badge badge-${order.statusClass}">${order.status}</span>`;
-            document.getElementById('payment-method').textContent = order.details.payment;
+    // Render the orders in the table
+    function renderOrders() {
+        const tableBody = document.getElementById('orders-table-body');
+        tableBody.innerHTML = '';
 
-            // Set order items
-            const itemsTable = document.getElementById('order-items');
-            itemsTable.innerHTML = '';
-            order.details.products.forEach(item => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${item.name}</td>
-                    <td>${item.color}</td>
-                    <td>${item.size}</td>
-                    <td>${item.quantity}</td>
-                    <td>${item.price}</td>
-                `;
-                itemsTable.appendChild(row);
-            });
+        // Update summary cards
+        document.getElementById('today-orders').textContent = orders.length;
+        document.getElementById('today-sales').textContent = orders.reduce((sum, order) => {
+            return sum + parseInt(order.amount);
+        }, 0) + ' ج.م';
+        document.getElementById('pending-orders').textContent = orders.filter(order => order.status === 'قيد الانتظار').length;
 
-            // Calculate totals
-            const subtotal = order.details.products.reduce((sum, item) => {
-                return sum + parseInt(item.price) * item.quantity;
-            }, 0);
-
-            document.getElementById('order-total').textContent = subtotal + ' ج.م';
-            document.getElementById('shipping-fee').textContent = order.details.shipping;
-            document.getElementById('order-grand-total').textContent = (subtotal + parseInt(order.details.shipping)) + ' ج.م';
-
-            // Show modal
-            const modal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
-            modal.show();
-        }
-
-        // Function to add new order (simulating real-time addition)
-        function addNewOrder(orderData) {
-            orders.unshift(orderData);
-            renderOrders();
-
-            // Show notification
-            const notification = new Notification('طلب جديد', {
-                body: `تم استلام طلب جديد من ${orderData.customer}`,
-                icon: 'https://cdn-icons-png.flaticon.com/512/3144/3144456.png'
-            });
-        }
-
-        // Simulate receiving a new order after 5 seconds
-        setTimeout(() => {
-            const newOrder = {
-                id: '#12346',
-                customer: 'محمود علي',
-                phone: '01098765432',
-                governorate: 'المنوفية',
-                amount: '800 ج.م',
-                status: 'قيد الانتظار',
-                date: '2023-10-15',
-                statusClass: 'pending',
-                details: {
-                    address: 'المنوفية - شبين الكوم - شارع الجلاء',
-                    products: [
-                        { name: 'تيشرت أوفر سايز', color: 'أحمر', size: '3XL', quantity: 4, price: '200 ج.م' }
-                    ],
-                    shipping: '50 ج.م',
-                    payment: 'فودافون كاش'
-                }
-            };
-
-            addNewOrder(newOrder);
-        }, 5000);
-
-        // Initialize the page
-        document.addEventListener('DOMContentLoaded', function() {
-            renderOrders();
-
-            // Refresh button
-            document.getElementById('refresh-orders').addEventListener('click', renderOrders);
-
-            // Print button
-            document.getElementById('print-order').addEventListener('click', function() {
-                window.print();
-            });
-
-            // Request notification permission
-            if (Notification.permission !== 'granted') {
-                Notification.requestPermission();
-            }
+        orders.forEach(order => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${order.id}</td>
+                <td>${order.customer}</td>
+                <td>${order.phone}</td>
+                <td>${order.governorate}</td>
+                <td>${order.amount}</td>
+                <td><span class="badge badge-${order.statusClass}">${order.status}</span></td>
+                <td>${order.date}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary view-order" data-id="${order.id}">
+                        <i class="fas fa-eye"></i> عرض
+                    </button>
+                </td>
+            `;
+            tableBody.appendChild(row);
         });
-    </script>
+
+        document.querySelectorAll('.view-order').forEach(button => {
+            button.addEventListener('click', function() {
+                const orderId = this.getAttribute('data-id');
+                showOrderDetails(orderId);
+            });
+        });
+    }
+
+    function showOrderDetails(orderId) {
+        const order = orders.find(o => o.id === orderId);
+        if (!order) return;
+
+        document.getElementById('modal-order-id').textContent = order.id.substring(1);
+        document.getElementById('customer-name').textContent = order.customer;
+        document.getElementById('customer-phone').textContent = order.phone;
+        document.getElementById('customer-address').textContent = order.details.address;
+        document.getElementById('order-date').textContent = order.date;
+        document.getElementById('order-status').innerHTML = `<span class="badge badge-${order.statusClass}">${order.status}</span>`;
+        document.getElementById('payment-method').textContent = order.details.payment;
+
+        const itemsTable = document.getElementById('order-items');
+        itemsTable.innerHTML = '';
+        order.details.products.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${item.name}</td>
+                <td>${item.color}</td>
+                <td>${item.size}</td>
+                <td>${item.quantity}</td>
+                <td>${item.price}</td>
+            `;
+            itemsTable.appendChild(row);
+        });
+
+        const subtotal = order.details.products.reduce((sum, item) => {
+            return sum + parseInt(item.price) * item.quantity;
+        }, 0);
+
+        document.getElementById('order-total').textContent = subtotal + ' ج.م';
+        document.getElementById('shipping-fee').textContent = order.details.shipping;
+        document.getElementById('order-grand-total').textContent = (subtotal + parseInt(order.details.shipping)) + ' ج.م';
+
+        const modal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
+        modal.show();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        fetchOrders();
+
+        document.getElementById('refresh-orders').addEventListener('click', fetchOrders);
+        document.getElementById('print-order').addEventListener('click', function () {
+            window.print();
+        });
+
+        if (Notification.permission !== 'granted') {
+            Notification.requestPermission();
+        }
+    });
+</script>
+
+
 </body>
 </html>
