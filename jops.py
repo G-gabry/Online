@@ -97,6 +97,24 @@ def get_predefined_response(page_id, user_message):
 
     return None
 
+
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
+
+# Example intents that imply a customer wants to buy
+BUYING_KEYWORDS = ["شراء", "اشتري", "طلب", "أريد شراء"]
+def embedding_func(text):
+    return embedding_model.encode(text)
+
+def is_buying_semantic(user_message, embedding_func, threshold=0.75):
+    user_vec = embedding_func(user_message)
+    for keyword in BUYING_KEYWORDS:
+        keyword_vec = embedding_func(keyword)
+        similarity = cosine_similarity([user_vec], [keyword_vec])[0][0]
+        if similarity >= threshold:
+            return True
+    return False
+
 conversations = {}
 def generate_ai_response(product_info, user_message, conversation_history=None):
     """Enhanced response generation with more natural flow"""
@@ -106,7 +124,7 @@ def generate_ai_response(product_info, user_message, conversation_history=None):
     }
 
     # Check for buying intent
-    is_buying_intent = any(word in user_message.lower() for word in ["اشتري", "شراء", "طلب", "حجز"])
+    is_buying_intent = is_buying_semantic(user_message, embedding_func)
 
     # Build natural context
     context = []
@@ -296,7 +314,7 @@ def handle_order_confirmation(user_id, user_message, product_info, page_id):
     except Exception as e:
         return f"❌ حدث خطأ أثناء حفظ الطلب: {str(e)}"
 
-
+from intent_detector import detect_intent
 def process_message(data):
     """Process messages from the queue"""
     try:
@@ -328,21 +346,29 @@ def process_message(data):
                 product_info = PRODUCT_DATABASE.get(page_id, {})
 
                 # Check if user is starting an order
+                intent = detect_intent(user_message)
+
                 if not conversations[sender_id]['order_started']:
-                    if any(word in user_message.lower() for word in ["اشتري", "شراء", "طلب", "حجز", "أريد شراء"]):
+                    if intent == "start_order":
                         response = generate_order_instructions(product_info)
                         conversations[sender_id]['order_started'] = True
+                    elif intent == "greeting":
+                        response = "أهلاً بك! كيف يمكنني مساعدتك اليوم؟"
+                    elif intent == "track_order":
+                        response = "من فضلك زودني برقم الطلب وسأتحقق لك فوراً 🔍"
                     else:
-                        response = get_predefined_response(page_id, user_message)
-                        if not response:
-                            response = generate_ai_response(
-                                product_info,
-                                user_message,
-                                conversations[sender_id]["history"]
-                            )
+                        response = generate_ai_response(product_info, user_message, conversations[sender_id]["history"])
                 else:
-                    response = handle_order_confirmation(sender_id, user_message, product_info, page_id)
-
+                    if intent == "restart_order":
+                        conversations[sender_id] = {
+                            "history": [],
+                            "order_started": False,
+                            "order_confirmed": False,
+                            "page_id": page_id
+                        }
+                        response = "تم بدء طلب جديد. من فضلك أخبرني بما ترغب في شرائه 😊"
+                    else:
+                        response = handle_order_confirmation(sender_id, user_message, product_info, page_id)
 
                 # Store and send message
                 conversations[sender_id]["history"].append({
