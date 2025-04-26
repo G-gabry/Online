@@ -11,7 +11,7 @@ from flask import Blueprint, jsonify
 import uuid
 from difflib import SequenceMatcher
 # Initialize Sentence Transformer model for Arabic (loaded once at startup)
-DEEPSEEK_API_KEY = "sk-6e8a4b83b53343568cbedc3b951c6f79"
+DEEPSEEK_API_KEY = "sk-6e8a4b83b53343568cbedc3b951c6f7"
 DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"
 embedding_model = SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')
 
