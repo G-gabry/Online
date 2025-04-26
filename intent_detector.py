@@ -6,11 +6,8 @@ embedding_model = SentenceTransformer('sentence-transformers/paraphrase-multilin
 # Define examples of user messages mapped to semantic intent
 INTENT_EXAMPLES = {
     "buying_intent": ["أريد شراء", "حابب أطلب", "اشتري", "عايز أطلب", "ممكن أطلب", "احجزلي واحد"],
-    "confirm_order": ["تمام", "أوكي", "تم", "أكد الطلب", "يلا بينا", "ابدأ"],
+    "confirm_order": ["تمام", "أوكي", "تم", "أكد الطلب","عايز عدد من قطع", "يلا بينا", "ابدأ"],
     "cancel_order": ["مش عايز", "غيرت رأيي", "الغاء", "ألغى"],
-    "ask_price": ["بكام", "كم السعر", "السعر كام", "بكم التيشيرت", "ايه سعره؟"],
-    "ask_size": ["فيه مقاسات؟", "المقاس", "2XL", "فيه صغير", "أكبر مقاس"],
-    "ask_color": ["اللون", "ايه الألوان", "فيه أبيض", "فيه أسود", "أحمر"],
     "track_order": ["فين الطلب", "متأخر ليه", "وصل امتى", "رقم الطلب"],
     "restart_order": ["طلب جديد", "ابدأ من جديد", "عايز اطلب تاني"],
     "change_order": ["أغير", "عدلت", "نسيت", "أعدل"]

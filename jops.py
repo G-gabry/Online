@@ -11,28 +11,58 @@ from flask import Blueprint, jsonify
 import uuid
 from difflib import SequenceMatcher
 # Initialize Sentence Transformer model for Arabic (loaded once at startup)
-DEEPSEEK_API_KEY = "sk-abf137dc5ac7432aa6facad7ebbd4dfd"
+DEEPSEEK_API_KEY = "sk-6e8a4b83b53343568cbedc3b951c6f79"
 DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"
 embedding_model = SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')
 
 PRODUCT_DATABASE = {
-    "388698940987084": {
-        "name": "عباية مطرزة",
-        "base_price": 249.99,
-        "description": "عباية سوداء مطرزة يدوياً بخيوط ذهبية",
-        "colors": ["أسود", "بيج", "ذهبي", "أحمر داكن"],
-        "sizes": ["48", "50", "52", "54"],
-        "predefined_responses": {
-            "الأسعار": "سعر العباية: 249.99 جنيه. خصم 10% للطلبات فوق 3 قطع.",
-            "المقاسات": "المقاسات المتوفرة: 48 (صغير), 50 (متوسط), 52 (كبير), 54 (كبير جداً).",
-            "الألوان": "الألوان المتوفرة: أسود، بيج، ذهبي، أحمر داكن.",
-            "الشحن": "مصاريف الشحن: 30 جنيه. القاهرة والجيزة خلال يومين، المحافظات خلال 3 أيام.",
-            "الاستبدال": "استبدال خلال 7 أيام برسوم 30 جنيه. لا استبدال بعد الاستخدام."
+    "388698940987084": {  # Assuming this is the T-shirt product page ID
+        "name": "تيشرت أوفر سايز قطن 100%",
+        "base_price": 250,
+        "description": "تيشرت قطني عالي الجودة بتصميم أوفر سايز",
+        "colors": ["أبيض", "أسود", "منت جرين", "رمادي", "بيج"],
+        "sizes": {
+            "XL": {"weight_range": "65-150 كجم", "dimensions": "XL"},
+            "2XL": {"weight_range": "75-165 كجم", "dimensions": "2XL"},
+            "3XL": {"weight_range": "90-175 كجم", "dimensions": "3XL"},
+            "4XL": {"weight_range": "115-190 كجم", "dimensions": "4XL (خاص)"},
+            "5XL": {"weight_range": "130-115 كجم", "dimensions": "5XL (خاص)"}
         },
-        "response_embeddings": None  # Will be initialized later
+        "العروض": {
+            "2_pieces": 440,
+            "3_pieces": 580,
+            "4_pieces": 700,
+            "5_pieces": 800
+        },
+        "سياسة الاستبدال": {
+            "القاهرة والجيزة": 50,
+            "المحافظات": 60,
+            "الصعيد": 70
+        },
+        "predefined_responses": {
+            "الأسعار او العروض": "سعر القطعة: 250 جنيه\nالعروض:\n- 2 قطع: 440 جنيه\n- 3 قطع: 580 جنيه\n- 4 قطع: 700 جنيه\n- 5 قطع: 800 جنيه",
+            "المقاسات": (
+                "المقاسات المتوفرة:\n"
+                "XL: 65-150 كجم\n"
+                "2XL: 75-165 كجم\n"
+                "3XL: 90-175 كجم\n"
+                "4XL: 115-190 كجم (مقاسات خاصة)\n"
+                "5XL: 130-115 كجم"
+            ),
+            "الألوان": "الألوان المتوفرة: أبيض، أسود، منت جرين، رضامي، بيع",
+            "الشحن": (
+                "مصاريف الشحن:\n"
+                "- القاهرة والجيزة: 50 جنيه\n"
+                "- المحافظات: 60 جنيه\n"
+                "- الصعيد: 70 جنيه"
+            ),
+            "الاستبدال": "يمكن استبدال المقاس خلال 3 أيام من الاستلام برسوم شحن إضافية"
+        },
+        "response_embeddings": None
     },
-    # ... (other products)
+
 }
+
 
 # Initialize embeddings for all predefined responses
 for page_id, product in PRODUCT_DATABASE.items():
@@ -102,18 +132,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 
 # Example intents that imply a customer wants to buy
-BUYING_KEYWORDS = ["شراء", "اشتري", "طلب", "أريد شراء"]
-def embedding_func(text):
-    return embedding_model.encode(text)
 
-def is_buying_semantic(user_message, embedding_func, threshold=0.75):
-    user_vec = embedding_func(user_message)
-    for keyword in BUYING_KEYWORDS:
-        keyword_vec = embedding_func(keyword)
-        similarity = cosine_similarity([user_vec], [keyword_vec])[0][0]
-        if similarity >= threshold:
-            return True
-    return False
 
 conversations = {}
 def generate_ai_response(product_info, user_message, conversation_history=None):
@@ -124,12 +143,12 @@ def generate_ai_response(product_info, user_message, conversation_history=None):
     }
 
     # Check for buying intent
-    is_buying_intent = is_buying_semantic(user_message, embedding_func)
+
 
     # Build natural context
     context = []
     if conversation_history:
-        for msg in conversation_history[-5:]:
+        for msg in conversation_history[-8:]:
             speaker = "العميل" if msg['role'] == 'user' else "أنت"
             context.append(f"{speaker}: {msg['content']}")
         context = "\n".join(context)
@@ -155,7 +174,7 @@ def generate_ai_response(product_info, user_message, conversation_history=None):
     1. ارد كما لو كنت شخصاً طبيعياً (ليس روبوت)
     2. استخدم كلمات مثل "أهلاً"، "طبعاً"، "بالنسبة لـ" لجعل الردود أكثر طبيعية
     3. أجب باختصار (سطرين كحد أقصى) إلا إذا طلب العميل تفاصيل أكثر
-    4. عند طلب الشراء: قدم تعليمات واضحة ومختصرة
+    4. عند طلب الشراء: قدم تعليمات واضحة ومختصرةو حاول الا تكرر نفس المعلومات 
     5. أنه المحادثة بلباقة بعد تأكيد الطلب
     """
 
@@ -202,16 +221,36 @@ def format_fallback_response(product_info):
 
 # Facebook Integration
 def generate_order_instructions(product_info):
-    """Generate the exact structured order message from your image"""
+    """Generate structured order message with exact format from the image"""
     return """
-    لتسجيل الأورد يرجي ارسال البيانات بالترتيب:
-    1. الأسم بالكامل
-    2. رقمين للتليفون
-    3. العنوان تفصيليا (المحافظة - المدينة - الحي)
-    4. العدد المطلوب
-    5. الألوان المرغوبة
-    6. وزن حضرتك
-    """
+📋 *طريقة إرسال الطلب* 📋
+
+_لضمان سرعة معالجة طلبك، يرجى إرسال البيانات بالضبط كما يلي:_
+
+الاسم بالكامل  
+رقم التليفون  
+اللون  
+المقاس  
+الوزن  
+الكمية  
+المحافظة  
+الحي/المنطقة  
+
+*مثال:*
+عمر على  
+01007549327  
+أسود  
+  54
+  XL  
+  2  
+الجيزة  
+الشوبك الغربي  
+
+🔹 ملاحظات:
+1. اكتب كل بند في سطر منفصل
+2. لا تستخدم علامات الترقيم مثل ( : أو - )
+3. تأكد من صحة رقم الهاتف
+"""
 
 import uuid
 import pyodbc
@@ -243,76 +282,249 @@ print("✅ Connection successful!")
 
 
   # In-memory conversation tracking
+import json
+from typing import Union, Dict
 
-def handle_order_confirmation(user_id, user_message, product_info, page_id):
-    """Processes an order and inserts it into the SQL Server database."""
+
+def extract_order_info(user_message: str, product_info: dict) -> Union[Dict, str]:
+    """
+    Enhanced order info extraction with comprehensive validation
+    Args:
+        user_message: The user's raw order message
+        product_info: Dictionary containing product details (colors, sizes, etc.)
+    Returns:
+        Dict: If all fields are properly extracted (contains all required keys)
+        str: Error message if missing/invalid fields
+    """
+    headers = {
+        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    prompt = f"""
+    استخرج المعلومات التالية من الرسالة بدقة وعالج أي أخطاء:
+
+    *المعلومات المطلوبة:*
+    1. الاسم الكامل (عربي فقط)
+    2. رقم الهاتف (11 رقم يبدأ ب 01)
+    3. اللون (من الألوان المتاحة: {', '.join(product_info['colors'])})
+    4. المقاس (من المقاسات المتاحة: {', '.join(product_info['sizes'].keys())})
+    5. عدد القطع (رقم فقط)
+    6. المحافظة (من محافظات مصر)
+    7. العنوان التفصيلي
+
+    *تعليمات صارمة:*
+    - إذا كان أي حقل ناقص أو غير صالح، اذكر جميع الأخطاء مع مثال تصحيح
+    - رقم الهاتف يجب أن يكون 11 رقم بدون مسافات
+    - المحافظة يجب أن تكون من محافظات مصر المعروفة
+    - إذا كانت الرسالة غير مكتملة، أعد نصاً واضحاً يطلب البيانات الناقصة
+
+    *رسالة العميل:*
+    "{user_message}"
+
+    *أمثلة للرد عند وجود أخطاء:*
+    - "نقص البيانات: يرجى إرسال الاسم الكامل ورقم الهاتف والمحافظة"
+    - "المقاس غير صحيح: المقاسات المتاحة هي XL, 2XL, 3XL"
+    - "رقم الهاتف يجب أن يكون 11 رقم يبدأ ب 01"
+
+    *تنسيق الإخراج عند اكتمال البيانات:*
+    {{
+        "الاسم": "...",
+        "الهاتف": "...",
+        "اللون": "...",
+         "الوزن": "...",
+        "المقاس": "...",
+        "الكمية": "...",
+        "المحافظة": "...",
+        "الحي": "..."
+    }}
+    """
+
+    payload = {
+        "model": "deepseek-chat",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.3,
+        "max_tokens": 200,
+        "language": "ar"
+    }
+
     try:
-        # Split and extract order fields
-        fields = user_message.strip().splitlines()
-        if len(fields) < 8:
-            return "❗️الرجاء إرسال جميع بيانات الطلب المطلوبة بالترتيب."
+        response = requests.post(DEEPSEEK_URL, headers=headers, json=payload, timeout=10)
+        response.raise_for_status()
+        ai_message = response.json()['choices'][0]['message']['content'].strip()
 
-        name = fields[0].strip()
-        print(name)
-        phone = fields[1].strip()
-        color = fields[2].strip()
-        size = fields[3].strip().upper()
-        weight = int(fields[4].strip())
-        quantity = int(fields[5].strip())
-        governorate = fields[6].strip()
-        address = fields[7].strip()
-        page_id = str(page_id)
-        print(page_id)
+        # Try to parse as JSON if complete
+        try:
+            order_data = json.loads(ai_message)
+            required_fields = ['الاسم', 'الهاتف', 'اللون','الوزن', 'المقاس','الكمية', 'المحافظة', 'الحي']
+            if all(key in order_data for key in required_fields):
+                return order_data
+            return ai_message  # Return error message if missing fields
+        except json.JSONDecodeError:
+            return ai_message  # Return the LLM's error message
 
-        unit_price = product_info.get("base_price", 0)
-        total_price = unit_price * quantity
-
-        # Generate order ID for user reference (not DB primary key)
-        order_id = f"ORD-{str(uuid.uuid4())[:8]}"
-
-        # Insert order into Orders table
-        cursor.execute("""
-            INSERT INTO Orders (page_id, customer_name, phone, governorate, address, status, payment_method, shipping_fee, total_price, order_date)
-            VALUES (?, ?, ?, ?, ?, 'قيد الانتظار', 'فودافون كاش', ?, ?, ?)
-        """, (
-            page_id, name, phone, governorate, address, 50, total_price, datetime.now()
-        ))
-        conn.commit()
-
-        sql_order_id = cursor.execute("SELECT SCOPE_IDENTITY()").fetchone()[0]
-
-        # Insert into OrderItems
-        cursor.execute("""
-            INSERT INTO OrderItems (order_id, product_name, color, size, quantity, unit_price)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (
-            sql_order_id, product_info['name'], color, size, quantity, unit_price
-        ))
-        conn.commit()
-        print("Done adding")
-        # Update conversation state
-        conversations[user_id] = {
-            "order_confirmed": True,
-            "order_id": order_id,
-            "history": []
-        }
-
-        return f"""
-        ✅ تم استلام طلبك رقم #{order_id}
-
-        👤 الاسم: {name}
-        📞 الهاتف: {phone}
-        🎨 اللون: {color}
-        📏 المقاس: {size}
-        ⚖️ الوزن: {weight} كجم
-        🔢 العدد: {quantity}
-        🏙️ العنوان: {governorate} - {address}
-
-        شكراً لثقتك بنا ❤️
-        """
-
+    except requests.exceptions.RequestException as e:
+        print(f"API Request Error: {str(e)}")
+        return "حدث خطأ في الاتصال. يرجى إعادة المحاولة لاحقاً"
     except Exception as e:
-        return f"❌ حدث خطأ أثناء حفظ الطلب: {str(e)}"
+        print(f"Unexpected Error: {str(e)}")
+        return "حدث خطأ غير متوقع أثناء معالجة طلبك"
+
+
+def handle_order_confirmation(user_id: str, user_message: str, product_info: dict, page_id: str) -> str:
+    """
+    Processes an order with comprehensive validation and database insertion
+
+    Args:
+        user_id: Unique identifier for the user
+        user_message: The user's order message
+        product_info: Dictionary containing product details (colors, sizes, etc.)
+        page_id: ID of the Facebook page/store
+
+    Returns:
+        str: Success message with order details or error message
+    """
+    try:
+        extracted_data = extract_order_info(user_message, product_info)
+
+        # Case 1: Got complete JSON data
+        if isinstance(extracted_data, dict):
+            # Validate color availability
+            if extracted_data['اللون'] not in product_info['colors']:
+                return f"اللون غير متاح. الألوان المتوفرة: {', '.join(product_info['colors'])}"
+
+            # Validate size availability
+            if extracted_data['المقاس'] not in product_info['sizes']:
+                return f"المقاس غير متاح. المقاسات المتوفرة: {', '.join(product_info['sizes'].keys())}"
+
+            # Calculate total price
+            quantity = int(extracted_data['الكمية'])
+            total_price = product_info['base_price'] * quantity
+
+            # Insert into Orders table
+            cursor.execute("""
+                INSERT INTO Orders (
+                    page_id, 
+                    customer_name, 
+                    phone, 
+                    governorate, 
+                    address, 
+                    status, 
+                    payment_method, 
+                    shipping_fee, 
+                    total_price, 
+                    order_date
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                str(page_id),
+                extracted_data['الاسم'],
+                extracted_data['الهاتف'],
+                extracted_data['المحافظة'],
+                extracted_data['العنوان'],
+                'قيد الانتظار',
+                'فودافون كاش',
+                50,  # shipping fee
+                total_price,
+                datetime.now()
+            ))
+            conn.commit()
+
+            # Get the inserted order ID
+            sql_order_id = cursor.execute("SELECT SCOPE_IDENTITY()").fetchone()[0]
+
+            # Insert into OrderItems table
+            cursor.execute("""
+                INSERT INTO OrderItems (
+                    order_id, 
+                    product_name, 
+                    color, 
+                    size, 
+                    quantity, 
+                    unit_price
+                ) VALUES (?, ?, ?, ?, ?, ?)
+            """, (
+                sql_order_id,
+                product_info['name'],
+                extracted_data['اللون'],
+                extracted_data['المقاس'],
+                quantity,
+                product_info['base_price']
+            ))
+            conn.commit()
+
+            # Generate readable order ID
+            order_id = f"ORD-{str(uuid.uuid4())[:8]}"
+
+            # Update conversation state
+            conversations[user_id] = {
+                "order_confirmed": True,
+                "order_id": order_id,
+                "history": [],
+                "order_details": extracted_data
+            }
+
+            return f"""
+            ✅ تم تأكيد طلبك #{order_id}
+            --------------------------
+            الاسم: {extracted_data['الاسم']}
+            الهاتف: {extracted_data['الهاتف']}
+            المنتج: {product_info['name']}
+            اللون: {extracted_data['اللون']}
+            المقاس: {extracted_data['المقاس']}
+            الكمية: {extracted_data['الكمية']}
+            العنوان: {extracted_data['المحافظة']} - {extracted_data['العنوان']}
+            السعر الإجمالي: {total_price} جنيه (شامل الشحن)
+            --------------------------
+            شكراً لثقتك بنا! سيتم التواصل معك لتأكيد التفاصيل.
+            """
+
+        # Case 2: Got error message from LLM
+        else:
+            return f"""
+            ⚠️ لم نستلم جميع البيانات المطلوبة
+            --------------------------
+            {extracted_data}
+            --------------------------
+            📋 يرجى إرسال البيانات كاملة بالشكل التالي:
+
+            الاسم الكامل
+            01012345678
+            اللون ({', '.join(product_info['colors'])})
+            المقاس ({', '.join(product_info['sizes'].keys())})
+            الكمية
+            المحافظة
+            العنوان التفصيلي
+            """
+
+    except KeyError as e:
+        error_msg = f"Missing field in data: {str(e)}"
+        print(f"KeyError: {error_msg}")
+        return "حدث خطأ في معالجة البيانات. يرجى إعادة إرسال المعلومات"
+    except ValueError as e:
+        error_msg = f"Invalid value: {str(e)}"
+        print(f"ValueError: {error_msg}")
+        return "يبدو أن هناك خطأ في إدخال البيانات. يرجى المراجعة وإعادة المحاولة"
+    except Exception as e:
+        error_msg = f"Unexpected error: {str(e)}"
+        print(f"Exception: {error_msg}")
+        return "عذراً، حدث خطأ أثناء معالجة طلبك. يرجى المحاولة لاحقاً"
+
+
+def cancel_order_by_id(order_id):
+    cursor.execute("UPDATE Orders SET status = 'تم الإلغاء' WHERE id = ?", (order_id,))
+    conn.commit()
+def get_tracking_status(order_id):
+    cursor.execute("SELECT status FROM Orders WHERE id = ?", (order_id,))
+    result = cursor.fetchone()
+    if result:
+        return f"🕓 حالة طلبك رقم {order_id}: {result.status}"
+    else:
+        return "❌ لم يتم العثور على الطلب. تأكد من رقم الطلب."
+
+def is_structured_order_message(message: str) -> bool:
+    """Check if message looks like an order with 8 expected fields."""
+    lines = message.strip().splitlines()
+    return len(lines) >=5
 
 from intent_detector import detect_intent
 def process_message(data):
@@ -339,38 +551,64 @@ def process_message(data):
                         "page_id": page_id
                     }
 
-                # Check if conversation should end
-                if conversations[sender_id].get('order_confirmed'):
-                    continue
-
                 product_info = PRODUCT_DATABASE.get(page_id, {})
-
-                # Check if user is starting an order
                 intent = detect_intent(user_message)
+                response = None  # 🛡️ Safe default
 
-                if not conversations[sender_id]['order_started']:
-                    if intent == "start_order":
-                        response = generate_order_instructions(product_info)
-                        conversations[sender_id]['order_started'] = True
-                    elif intent == "greeting":
-                        response = "أهلاً بك! كيف يمكنني مساعدتك اليوم؟"
-                    elif intent == "track_order":
-                        response = "من فضلك زودني برقم الطلب وسأتحقق لك فوراً 🔍"
-                    else:
-                        response = generate_ai_response(product_info, user_message, conversations[sender_id]["history"])
-                else:
-                    if intent == "restart_order":
-                        conversations[sender_id] = {
-                            "history": [],
-                            "order_started": False,
-                            "order_confirmed": False,
-                            "page_id": page_id
-                        }
-                        response = "تم بدء طلب جديد. من فضلك أخبرني بما ترغب في شرائه 😊"
-                    else:
+                # Handle post-confirmation actions
+                if conversations[sender_id].get("order_confirmed"):
+                    order_id = conversations[sender_id].get("order_id")
+
+                    if intent == "track_order":
+                        response = get_tracking_status(order_id)
+
+                    elif intent == "change_order":
+                        response = "تم فتح طلبك للتعديل، من فضلك أرسل البيانات الجديدة كاملة."
+                        conversations[sender_id]["order_confirmed"] = False
+                        conversations[sender_id]["order_started"] = True
+
+                    elif intent == "cancel_order":
+                        cancel_order_by_id(order_id)
+                        response = f"✅ تم إلغاء الطلب رقم {order_id} بنجاح. شكراً لك!"
+                        conversations.pop(sender_id)
+
+                    elif intent == "confirm_order" or is_structured_order_message(user_message):
                         response = handle_order_confirmation(sender_id, user_message, product_info, page_id)
 
-                # Store and send message
+                    else:
+                        response = "تم تأكيد طلبك مسبقاً. هل ترغب في تتبع أو تعديل الطلب؟"
+
+                else:
+                    if not conversations[sender_id]['order_started']:
+                        if intent == "buying_intent":
+                            response = generate_order_instructions(product_info)
+                            conversations[sender_id]['order_started'] = True
+
+                        elif intent == "track_order":
+                            response = "من فضلك زودني برقم الطلب وسأتحقق لك فوراً 🔍"
+
+                        else:
+                            predefined_response = get_predefined_response(page_id, user_message)
+                            if predefined_response:
+                                response = predefined_response
+                            else:
+                                response = generate_ai_response(
+                                    product_info,
+                                    user_message,
+                                    conversations[sender_id]["history"]
+                                )
+                    else:
+                        # User already started an order but not confirmed — maybe confirming now
+                        if is_structured_order_message(user_message) or intent == "confirm_order":
+                            response = handle_order_confirmation(sender_id, user_message, product_info, page_id)
+                        else:
+                            response = generate_ai_response(
+                                product_info,
+                                user_message,
+                                conversations[sender_id]["history"]
+                            )
+
+                # 🧠 Save the conversation history
                 conversations[sender_id]["history"].append({
                     "role": "user",
                     "content": user_message
@@ -380,11 +618,14 @@ def process_message(data):
                     "content": response
                 })
 
+                # ✅ Send the message
                 send_messenger_message(page_id, sender_id, response)
 
     except Exception as e:
-        print(f"Error processing message: {str(e)}")
-        # Implement retry logic here if needed
+        print(f"❌ Error processing message: {str(e)}")
+
+
+
 
 def send_messenger_message(page_id, user_id, text):
     page_token = PAGE_TOKENS.get(page_id)
