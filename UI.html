@@ -199,7 +199,7 @@
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">جميع الطلبات</h5>
                         <div>
-                            <button class="btn btn-sm btn-outline-primary me-2">
+                            <button class="btn btn-sm btn-outline-primary me-2" type="button" data-bs-toggle="collapse" data-bs-target="#filterOptions" aria-expanded="false" aria-controls="filterOptions">
                                 <i class="fas fa-filter"></i> تصفية
                             </button>
                             <button class="btn btn-sm btn-primary" id="refresh-orders">
@@ -207,6 +207,44 @@
                             </button>
                         </div>
                     </div>
+
+                 <div class="collapse mb-3" id="filterOptions">
+    <div class="card card-body">
+        <div class="row g-2">
+            <div class="col-md-4">
+                <input type="text" class="form-control" id="filter-customer" placeholder="اسم العميل">
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" id="filter-status">
+                    <option value="">كل الحالات</option>
+                    <option value="قيد الانتظار">قيد الانتظار</option>
+                    <option value="مكتمل">مكتمل</option>
+                    <option value="ملغي">ملغي</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button class="btn btn-primary w-100" id="apply-filters">تطبيق التصفية</button>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" id="filter-date-range">
+                    <option value="">كل الفترات</option>
+                    <option value="today">اليوم</option>
+                    <option value="last3days">آخر 3 أيام</option>
+                    <option value="thisweek">هذا الأسبوع</option>
+                    <option value="custom">نطاق مخصص</option>
+                </select>
+            </div>
+            <div class="col-md-8 d-none" id="custom-date-range">
+                <div class="input-group">
+                    <input type="date" class="form-control" id="start-date">
+                    <input type="date" class="form-control" id="end-date">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
                     <div class="card-body">
                         <div class="table-responsive">
                             <table class="table table-hover">
@@ -343,6 +381,63 @@
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 
     <script>
+const orders = [
+            {
+                id: '#12345',
+                customer: 'محمد أحمد',
+                phone: '01012345678',
+                governorate: 'القاهرة',
+                amount: '450 ج.م',
+                status: 'مكتمل',
+                date: '2023-10-15',
+                statusClass: 'completed',
+                details: {
+                    address: 'القاهرة - مدينة نصر - شارع 9',
+                    products: [
+                        { name: 'تيشرت أوفر سايز', color: 'أسود', size: 'XL', quantity: 2, price: '200 ج.م' },
+                        { name: 'تيشرت أوفر سايز', color: 'أبيض', size: 'L', quantity: 1, price: '200 ج.م' }
+                    ],
+                    shipping: '50 ج.م',
+                    payment: 'فودافون كاش'
+                }
+            },
+            {
+                id: '#12344',
+                customer: 'أحمد محمود',
+                phone: '01123456789',
+                governorate: 'الجيزة',
+                amount: '350 ج.م',
+                status: 'قيد الانتظار',
+                date: '2023-10-15',
+                statusClass: 'pending',
+                details: {
+                    address: 'الجيزة - الدقي - شارع الجامعة',
+                    products: [
+                        { name: 'تيشرت أوفر سايز', color: 'أزرق', size: '2XL', quantity: 1, price: '250 ج.م' }
+                    ],
+                    shipping: '50 ج.م',
+                    payment: 'فودافون كاش'
+                }
+            },
+            {
+                id: '#12343',
+                customer: 'علي حسن',
+                phone: '01234567890',
+                governorate: 'الإسكندرية',
+                amount: '650 ج.م',
+                status: 'مكتمل',
+                date: '2023-10-14',
+                statusClass: 'completed',
+                details: {
+                    address: 'الإسكندرية - سموحة - شارع 45',
+                    products: [
+                        { name: 'تيشرت أوفر سايز', color: 'رمادي', size: 'XL', quantity: 3, price: '200 ج.م' }
+                    ],
+                    shipping: '50 ج.م',
+                    payment: 'فودافون كاش'
+                }
+            }
+        ];
 
 
 
@@ -359,43 +454,122 @@ renderOrders();
     }
 
     // Render the orders in the table
-    function renderOrders() {
-        const tableBody = document.getElementById('orders-table-body');
-        tableBody.innerHTML = '';
+    function renderOrders(customOrders = null) {
+    const tableBody = document.getElementById('orders-table-body');
+    const currentOrders = customOrders || orders;
+    tableBody.innerHTML = '';
 
-        // Update summary cards
-        document.getElementById('today-orders').textContent = orders.length;
-        document.getElementById('today-sales').textContent = orders.reduce((sum, order) => {
-            return sum + parseInt(order.amount);
-        }, 0) + ' ج.م';
-        document.getElementById('pending-orders').textContent = orders.filter(order => order.status === 'قيد الانتظار').length;
+    // Update summary cards
+    document.getElementById('today-orders').textContent = currentOrders.length;
+    document.getElementById('today-sales').textContent = currentOrders.reduce((sum, order) => {
+        return sum + parseInt(order.amount);
+    }, 0) + ' ج.م';
+    document.getElementById('pending-orders').textContent = currentOrders.filter(order => order.status === 'قيد الانتظار').length;
 
-        orders.forEach(order => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${order.id}</td>
-                <td>${order.customer}</td>
-                <td>${order.phone}</td>
-                <td>${order.governorate}</td>
-                <td>${order.amount}</td>
-                <td><span class="badge badge-${order.statusClass}">${order.status}</span></td>
-                <td>${order.date}</td>
-                <td>
-                    <button class="btn btn-sm btn-outline-primary view-order" data-id="${order.id}">
-                        <i class="fas fa-eye"></i> عرض
-                    </button>
-                </td>
-            `;
-            tableBody.appendChild(row);
+    currentOrders.forEach(order => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td>${order.id}</td>
+        <td>${order.customer}</td>
+        <td>${order.phone}</td>
+        <td>${order.governorate}</td>
+        <td>${order.amount}</td>
+        <td><span class="badge badge-${order.statusClass}">${order.status}</span></td>
+        <td>${order.date}</td>
+        <td>${order.size}</td>
+        <td>${order.color}</td>
+        <td>${order.quantity}</td>
+ <td style="white-space: nowrap;">
+    <div class="d-inline-flex align-items-center gap-1">
+        <button class="btn btn-sm btn-outline-primary view-order" data-id="${order.id}">
+            <i class="fas fa-eye"></i> عرض
+        </button>
+        ${order.status !== 'مكتمل' ? `
+        <button class="btn btn-sm btn-outline-success update-order" data-id="${order.id}">
+            <i class="fas fa-edit"></i> تحديث
+        </button>
+        <button class="btn btn-sm btn-outline-danger delete-order" data-id="${order.id}">
+            <i class="fas fa-trash"></i> حذف
+        </button>
+        <button class="btn btn-sm btn-outline-warning deliver-order" data-id="${order.id}">
+            <i class="fas fa-check"></i> تسليم
+        </button>
+        ` : ''}
+    </div>
+</td>
+
+
+    `;
+    tableBody.appendChild(row);
+});
+
+
+    document.querySelectorAll('.view-order').forEach(button => {
+        button.addEventListener('click', function () {
+            const orderId = this.getAttribute('data-id');
+            showOrderDetails(orderId);
         });
+    });
+    document.querySelectorAll('.update-order').forEach(button => {
+    button.addEventListener('click', function () {
+        const orderId = this.getAttribute('data-id');
+        if (confirm(`هل أنت متأكد أنك تريد تعديل الطلب رقم ${orderId}؟`)) {
+            alert(`تم تعديل الطلب رقم ${orderId} (هذا مثال، يمكنك استبداله بنموذج تحديث).`);
+        }
+    });
+});
 
-        document.querySelectorAll('.view-order').forEach(button => {
-            button.addEventListener('click', function() {
-                const orderId = this.getAttribute('data-id');
-                showOrderDetails(orderId);
-            });
+document.querySelectorAll('.delete-order').forEach(button => {
+    button.addEventListener('click', function () {
+        const orderId = this.getAttribute('data-id');
+        if (confirm(`هل أنت متأكد أنك تريد حذف الطلب رقم ${orderId}؟`)) {
+            alert(`تم حذف الطلب رقم ${orderId} (هذا مثال، يمكن ربطه بحذف فعلي).`);
+        }
+    });
+});
+
+document.querySelectorAll('.deliver-order').forEach(button => {
+    button.addEventListener('click', function () {
+        const orderId = this.getAttribute('data-id');
+        if (confirm(`هل تم تسليم الطلب رقم ${orderId}؟`)) {
+            const order = orders.find(o => o.id == orderId);
+            if (order) {
+                order.status = 'مكتمل';
+                order.statusClass = 'success';
+                renderOrders();
+                alert(`تم تحديث حالة الطلب رقم ${orderId} إلى "مكتمل".`);
+            }
+        }
+    });
+});
+
+}
+
+function applyFilters() {
+    const selectedRange = document.querySelector('.filter-btn.active')?.getAttribute('data-range');
+    const selectedStatus = document.getElementById('status-filter').value;
+
+    let filteredOrders = [...orders];
+
+    if (selectedRange) {
+        const now = new Date();
+        filteredOrders = filteredOrders.filter(order => {
+            const orderDate = new Date(order.date);
+            const diffTime = now - orderDate;
+            const diffDays = diffTime / (1000 * 3600 * 24);
+            if (selectedRange === 'today') return diffDays < 1;
+            if (selectedRange === '3days') return diffDays < 3;
+            if (selectedRange === '7days') return diffDays < 7;
+            return true;
         });
     }
+
+    if (selectedStatus) {
+        filteredOrders = filteredOrders.filter(order => order.status === selectedStatus);
+    }
+
+    renderOrders(filteredOrders);
+}
 
     function showOrderDetails(orderId) {
         const order = orders.find(o => o.id === orderId);
@@ -447,7 +621,50 @@ renderOrders();
             Notification.requestPermission();
         }
     });
+    document.addEventListener('DOMContentLoaded', function () {
+    fetchOrders();
+
+    document.getElementById('refresh-orders').addEventListener('click', fetchOrders);
+    document.getElementById('print-order').addEventListener('click', () => window.print());
+
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            applyFilters();
+        });
+    });
+    document.getElementById('apply-filters').addEventListener('click', function () {
+    const customerFilter = document.getElementById('filter-customer').value.trim();
+    const statusFilter = document.getElementById('filter-status').value;
+
+    const filteredOrders = orders.filter(order => {
+        const matchesCustomer = customerFilter === "" || order.customer.includes(customerFilter);
+        const matchesStatus = statusFilter === "" || order.status === statusFilter;
+        return matchesCustomer && matchesStatus;
+    });
+
+    renderOrders(filteredOrders);
+});
+
+    document.getElementById('status-filter').addEventListener('change', applyFilters);
+});
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const dateRangeSelect = document.getElementById('filter-date-range');
+        const customDateRange = document.getElementById('custom-date-range');
+
+        dateRangeSelect.addEventListener('change', function () {
+            if (this.value === 'custom') {
+                customDateRange.classList.remove('d-none');
+            } else {
+                customDateRange.classList.add('d-none');
+            }
+        });
+    });
 </script>
+
+
 
 
 </body>

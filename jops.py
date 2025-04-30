@@ -274,7 +274,7 @@ def init_database(db_host: str, db_name: str):
     return pyodbc.connect(connection_string)
 
 # Test connection
-conn = init_database('localhost', 'BusinessOrders')
+conn = init_database('localhost', 'ordersDB')
 cursor = conn.cursor()
 cursor.execute("SELECT 1")
 print("✅ Connection successful!")
@@ -658,16 +658,15 @@ PAGE_TOKENS = {
 # In api_routes.py
 orders_api = Blueprint('orders_api', __name__)
 
-@orders_api.route('/api/orders/388698940987084')
-def get_orders_by_page(page_id):
+@orders_api.route('/orders/<int:user_id>')
+def get_orders_by_user(user_id):
     cursor.execute("""
-        SELECT o.id, o.customer_name, o.phone, o.governorate, o.address,
+        select o.id, o.customer_name, o.phone, o.governorate, o.address,
                o.status, o.order_date, oi.color, oi.size, oi.quantity,
                oi.unit_price, oi.product_name
-        FROM Orders o
-        JOIN OrderItems oi ON o.id = oi.order_id
-        WHERE o.page_id = ?
-    """, (page_id,))
+			   from Orders o join OrderItems oi on (o.id=oi.order_id) join Pages p on(o.page_id=p.page_id)
+			   where p.user_id=?
+    """, (user_id,))
     rows = cursor.fetchall()
 
     orders = {}
