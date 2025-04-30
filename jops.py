@@ -658,7 +658,7 @@ PAGE_TOKENS = {
 # In api_routes.py
 orders_api = Blueprint('orders_api', __name__)
 
-@orders_api.route('/orders/<int:user_id>')
+@orders_api.route('/api/orders')
 def get_orders_by_user(user_id):
     cursor.execute("""
         select o.id, o.customer_name, o.phone, o.governorate, o.address,
