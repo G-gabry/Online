@@ -114,7 +114,7 @@
         }
     </style>
 </head>
-<body>
+<body data-user-id="{{ session['user_id'] }}">
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
@@ -446,8 +446,8 @@ renderOrders();
 
     // Fetch orders from backend API
     async function fetchOrders() {
-        const pageId = "388698940987084"; // 👈 Replace with the actual page_id dynamically if needed
-        const response = await fetch(`/api/orders/${pageId}`);
+        user_id=document.body.dataset.user_id; // 👈 Replace with the actual page_id dynamically if needed
+        const response = await fetch(`/api/orders/${user_id}`);
         const data = await response.json();
         orders = data;
         renderOrders();

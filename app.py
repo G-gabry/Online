@@ -27,7 +27,7 @@ app = Flask(__name__)
 # redis_conn = redis.Redis(host='localhost', port=6379, db=0)
 # task_queue = Queue('facebook_messages', connection=redis_conn)
 # Temporary storage (replace with database in production)
-app.register_blueprint(orders_api)
+app.register_blueprint(orders_api,url_prefix='/api')
 
 
 
@@ -84,14 +84,24 @@ conn_str = (
     "Trusted_Connection=yes;"  # or use UID/PWD if needed
 )
 conn = pyodbc.connect(conn_str)
+
 @app.route('/')
 def home():
     user_id = session.get('user_id')
     if user_id:
-        return redirect(url_for('orders_api.get_orders_by_user',user_id=user_id))
-
+        # Redirect to UI dashboard route (not API endpoint)
+        return redirect(url_for('dashboard',user_id=user_id))  # 👈 This should render your UI template
     return redirect(url_for('login'))
 
+
+@app.route('/dashboard')
+def dashboard():
+    user_id = session.get('user_id')
+    if not user_id:
+        return redirect(url_for('login'))
+
+    # Render your main UI template
+    return render_template('UI.html',user_id=user_id)
 @app.route('/login', methods=['GET', 'POST'])
 def login():
 
