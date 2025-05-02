@@ -1,41 +1,76 @@
-from sentence_transformers import SentenceTransformer, util
-
-# Load only once
-embedding_model = SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')
-
-# Define examples of user messages mapped to semantic intent
-INTENT_EXAMPLES = {
-    "buying_intent": ["أريد شراء", "حابب أطلب", "اشتري", "عايز أطلب", "ممكن أطلب", "احجزلي واحد"],
-    "confirm_order": ["تمام", "أوكي", "تم", "أكد الطلب","عايز عدد من قطع", "يلا بينا", "ابدأ"],
-    "cancel_order": ["مش عايز", "غيرت رأيي", "الغاء", "ألغى"],
-    "track_order": ["فين الطلب", "متأخر ليه", "وصل امتى", "رقم الطلب"],
-    "restart_order": ["طلب جديد", "ابدأ من جديد", "عايز اطلب تاني"],
-    "change_order": ["أغير", "عدلت", "نسيت", "أعدل"]
-}
-
-# Precompute embeddings
-# Convert all intent examples into embeddings
-intent_embeddings = {}
-
-for intent, phrases in INTENT_EXAMPLES.items():
-    embedded_phrases = []
-    for phrase in phrases:
-        embedded_phrases.append(embedding_model.encode(phrase, convert_to_tensor=True))
-    intent_embeddings[intent] = embedded_phrases
 
 
-def detect_intent(user_message: str, threshold: float = 0.7) -> str:
-    """Return the best matching intent or 'unknown'"""
-    user_embed = embedding_model.encode(user_message, convert_to_tensor=True)
 
-    best_intent = "unknown"
-    best_score = 0
+import requests
+def detect_intent(user_message, conversation_history=None):
+    DEEPSEEK_API_KEY = "sk-72aaab047f7d4eacb9124aea8dd997ec"
+    DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+        "Content-Type": "application/json"
+    }
 
-    for intent, examples in intent_embeddings.items():
-        for ex_embed in examples:
-            score = util.cos_sim(user_embed, ex_embed).item()
-            if score > best_score:
-                best_score = score
-                best_intent = intent
+    context = []
+    if conversation_history:
+        for msg in conversation_history[-4:]:
+            speaker = "العميل" if msg['role'] == 'user' else "أنت"
+            context.append(f"{speaker}: {msg['content']}")
+        context = "\n".join(context)
 
-    return best_intent if best_score >= threshold else "unknown"
+    prompt = f"""
+صنّف الرسالة التالية بناءً على المحادثات السابقة والنوايا المحددة. يجب أن يكون الرد كلمة واحدة فقط من القائمة التالية:
+
+شراء
+إلغاء
+تتبع_الطلب
+تعديل_الطلب
+بدء_جديد
+استفسار
+غير_معروف
+
+النوايا المتاحة:
+1. "شراء" - عندما يعبر العميل عن رغبته في الشراء (مثال: "عايز أطلب"، "حابب أشتري")
+2. "إلغاء" - رغبة في إلغاء الطلب (مثال: "عايز ألغي"، "غيرت رأيي")
+3. "تتبع_الطلب" - استفسار عن حالة الشحن (مثال: "الطلب هيوصل امتى؟"، "عايز أعرف حالة الطلب")
+4. "تعديل_الطلب" - طلب تغيير في الطلب الحالي (مثال: "عايز أغير اللون"، "نفسي في مقاس أصغر")
+5. "بدء_جديد" - رغبة في بدء طلب جديد (مثال: "مسح اللي فات"، "ابتدى من جديد")
+6. "استفسار" - أسئلة عامة عن المنتج (مثال: "فيها خصم؟"، "المقاسات موجودة؟")
+7. "غير_معروف" - عندما لا تنتمي الرسالة لأي نية محددة
+
+محادثات سابقة:
+{context or 'لا يوجد محادثة سابقة'}
+
+الرسالة الجديدة: "{user_message}"
+التصنيف:"""
+
+    payload = {
+        "model": "deepseek-chat",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.1,  # Lower temperature for more deterministic responses
+        "max_tokens": 10,    # Limit to prevent verbose responses
+        "stop": ["\n"],     # Stop at newlines to prevent explanations
+        "language": "ar"
+    }
+
+    try:
+        response = requests.post(DEEPSEEK_URL, headers=headers, json=payload, timeout=35)
+        response.raise_for_status()
+        ai_message = response.json()['choices'][0]['message']['content'].strip()
+
+        # Validate the response is one of our expected intents
+        valid_intents = ["شراء", "إلغاء", "تتبع_الطلب", "تعديل_الطلب",
+                        "بدء_جديد", "استفسار", "غير_معروف"]
+
+        if ai_message in valid_intents:
+          return ai_message
+        else:
+          return "غير_معروف"
+
+    except Exception as e:
+        print(f"API Error: {str(e)}")
+        return "غير_معروف"
+
+print(detect_intent("عايز قطعتين"))
+
+
+
